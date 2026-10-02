@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tatlı Sevkiyat ve Trend Takip Otomasyonu</title>
+    <!-- Tailwind CSS ve FontAwesome CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen">
+
+    <!-- GİRİŞ EKRANI -->
+    <div id="loginScreen" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-100">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl shadow-lg shadow-amber-500/30">
+                    <i class="fa-solid fa-cake-candles"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900">Sevkiyat Otomasyonu</h1>
+                <p class="text-sm text-slate-500 mt-1">Lütfen kullanıcı bilgileriyle giriş yapın</p>
+            </div>
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kullanıcı Adı</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="username" required class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition" placeholder="Kullanıcı adı">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Şifre</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="password" required class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition" placeholder="••••••">
+                    </div>
+                </div>
+                <div id="loginError" class="text-red-500 text-xs hidden font-medium text-center bg-red-50 p-2 rounded-lg">Kullanıcı adı veya şifre hatalı!</div>
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-amber-500/30 transition duration-200">
+                    Sisteme Giriş Yap
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ANA UYGULAMA (Giriş yapılınca görünür) -->
+    <div id="appContainer" class="hidden min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white text-lg shadow-md shadow-amber-500/20">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-900 leading-none">Tatlı Sevkiyat Yönetimi</h1>
+                        <p class="text-xs text-slate-500 mt-1">Şube Bazlı Takip ve Dashboard</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl">
+                    <button onclick="switchTab('entry')" id="btnTabEntry" class="px-4 py-2 text-sm font-semibold rounded-lg transition bg-white text-slate-900 shadow-xs">
+                        <i class="fa-solid fa-pen-to-square mr-2"></i>Veri Girişi
+                    </button>
+                    <button onclick="switchTab('history')" id="btnTabHistory" class="px-4 py-2 text-sm font-semibold rounded-lg transition text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-clock-rotate-left mr-2"></i>Geçmiş Loglar
+                    </button>
+                    <button onclick="switchTab('dashboard')" id="btnTabDashboard" class="px-4 py-2 text-sm font-semibold rounded-lg transition text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-chart-pie mr-2"></i>Dashboard
+                    </button>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span class="text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg">
+                        <i class="fa-solid fa-user-check text-emerald-500 mr-1.5"></i>Yusuf
+                    </span>
+                    <button onclick="handleLogout()" class="text-slate-400 hover:text-red-500 p-2 transition" title="Çıkış Yap">
+                        <i class="fa-solid fa-right-from-bracket text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- İçerik Alanı -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+            
+            <!-- SEKME 1: VERİ GİRİŞİ -->
+            <div id="tabEntry" class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 id="formTitle" class="text-lg font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-truck-fast text-amber-500 mr-2"></i> Günlük Sevkiyat Girişi
+                        </h2>
+                        <div id="editModeIndicator" class="hidden items-center space-x-2 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl text-xs font-semibold text-amber-700">
+                            <i class="fa-solid fa-pen-to-square"></i> Düzenleme Modu
+                            <button onclick="cancelEdit()" class="text-slate-400 hover:text-red-500 ml-2" title="İptal Et"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    </div>
+
+                    <form id="sevkiyatForm" onsubmit="saveSevkiyat(event)" class="space-y-6">
+                        <input type="hidden" id="editingId" value="">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Sevkiyat Tarihi</label>
+                                <input type="date" id="sevkiyatTarih" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Şube Seçimi</label>
+                                <select id="sevkiyatSube" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none">
+                                    <option value="">Şube Seçiniz...</option>
+                                    <option value="Silivri">Silivri</option>
+                                    <option value="Mega">Mega</option>
+                                    <option value="Akbatı">Akbatı</option>
+                                    <option value="Fulya">Fulya</option>
+                                    <option value="212">212</option>
+                                    <option value="Çam Sakura">Çam Sakura</option>
+                                    <option value="Esenyurt">Esenyurt</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">Ürün Miktarları (Kalemler)</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                <div>
+                                    <label class="block text-xs text-slate-600 mb-1">Ekler (KG)</label>
+                                    <input type="text" inputmode="decimal" data-urun="Ekler (KG)" class="urun-input w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Örn: 32,4 veya 32">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-600 mb-1">Kazandibi (Adet)</label>
+                                    <input type="text" inputmode="decimal" data-urun="Kazandibi (Adet)" class="urun-input w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Örn: 150">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-600 mb-1">Tavukgöğsü (Adet)</label>
+                                    <input type="text" inputmode="decimal" data-urun="Tavukgöğsü (Adet)" class="urun-input w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Örn: 100">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-600 mb-1">Sütlaç (Adet)</label>
+                                    <input type="text" inputmode="decimal" data-urun="Sütlaç (Adet)" class="urun-input w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Örn: 200">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-600 mb-1">Profiterol (KG)</label>
+                                    <input type="text" inputmode="decimal" data-urun="Profiterol (KG)" class="urun-input w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Örn: 25,5">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button type="submit" id="submitBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-xl shadow-lg shadow-amber-500/30 transition flex items-center">
+                                <i class="fa-solid fa-floppy-disk mr-2"></i> Sevkiyatı Kaydet
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- SEKME 2: GEÇMİŞ LOGLAR -->
+            <div id="tabHistory" class="hidden space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                    <div class="flex flex-col lg:flex-row justify-between items-center gap-4 mb-6">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-clock-rotate-left text-amber-500 mr-2"></i> Şube ve Tarih Bazlı Geçmiş Loglar
+                        </h2>
+                        <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                            <!-- Şube Filtresi -->
+                            <select id="filterLogSube" onchange="renderLogs()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-amber-500">
+                                <option value="">Tüm Şubeler</option>
+                                <option value="Silivri">Silivri</option>
+                                <option value="Mega">Mega</option>
+                                <option value="Akbatı">Akbatı</option>
+                                <option value="Fulya">Fulya</option>
+                                <option value="212">212</option>
+                                <option value="Çam Sakura">Çam Sakura</option>
+                                <option value="Esenyurt">Esenyurt</option>
+                            </select>
+                            <!-- Başlangıç Tarihi Filtresi -->
+                            <div class="flex items-center space-x-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                                <span class="text-xs text-slate-500 font-medium">Başlangıç:</span>
+                                <input type="date" id="filterLogStartDate" onchange="renderLogs()" class="bg-transparent text-sm outline-none font-medium text-slate-700">
+                            </div>
+                            <button onclick="resetLogFilters()" class="text-slate-400 hover:text-slate-700 p-2 transition text-sm font-medium" title="Filtreleri Temizle">
+                                <i class="fa-solid fa-filter-circle-xmark mr-1"></i>Sıfırla
+                            </button>
+                            <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center">
+                                <i class="fa-solid fa-download mr-2"></i> Yedekle
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 uppercase text-xs border-b border-slate-200">
+                                    <th class="p-3">Kayıt Tarih/Saat (Timestamp)</th>
+                                    <th class="p-3">Sevkiyat Tarihi</th>
+                                    <th class="p-3">Şube</th>
+                                    <th class="p-3">İçerik Durumu</th>
+                                    <th class="p-3 text-right">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logTableBody" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dinamik Dolacak -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEKME 3: DASHBOARD -->
+            <div id="tabDashboard" class="hidden space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900 flex items-center">
+                                <i class="fa-solid fa-chart-pie text-amber-500 mr-2"></i> Yönetici Performans Dashboard'u
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-1">Seçilen aya ait şube ve ürün sevkiyat özetleri</p>
+                        </div>
+                        <div>
+                            <select id="filterMonth" onchange="renderDashboard()" class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-amber-500">
+                                <!-- Dinamik Ay Seçenekleri -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Üst Özet Kartları -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="summaryCards">
+                        <!-- Dinamik -->
+                    </div>
+
+                    <!-- Grafik Alanları (2 Sütun) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                            <h3 class="text-sm font-bold text-slate-700 uppercase mb-4"><i class="fa-solid fa-chart-column mr-1 text-amber-500"></i> Şube Bazlı Toplam Sevkiyat</h3>
+                            <div class="h-72">
+                                <canvas id="barChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                            <h3 class="text-sm font-bold text-slate-700 uppercase mb-4"><i class="fa-solid fa-chart-pie mr-1 text-amber-500"></i> Ürün Türü Dağılımı</h3>
+                            <div class="h-72 flex items-center justify-center">
+                                <canvas id="doughnutChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Şube Ürün Detay Tablosu -->
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                        <h3 class="text-sm font-bold text-slate-700 uppercase mb-3"><i class="fa-solid fa-table-list mr-1 text-amber-500"></i> Şube Bazlı Ürün Kalemleri Dağılım Tablosu</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="text-slate-400 uppercase text-xs border-b border-slate-200">
+                                        <th class="py-3 px-3">Şube Adı</th>
+                                        <th class="py-3 px-3">Ekler <span class="text-[10px] text-amber-600 font-semibold">(KG)</span></th>
+                                        <th class="py-3 px-3">Profiterol <span class="text-[10px] text-amber-600 font-semibold">(KG)</span></th>
+                                        <th class="py-3 px-3">Kazandibi <span class="text-[10px] text-blue-600 font-semibold">(Adet)</span></th>
+                                        <th class="py-3 px-3">Tavukgöğsü <span class="text-[10px] text-blue-600 font-semibold">(Adet)</span></th>
+                                        <th class="py-3 px-3">Sütlaç <span class="text-[10px] text-blue-600 font-semibold">(Adet)</span></th>
+                                        <th class="py-3 px-3 text-right">Toplam Miktar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboardTableBody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                                    <!-- Dinamik -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- JavaScript Uygulama Mantığı -->
+    <script>
+        let logs = JSON.parse(localStorage.getItem('tatli_sevkiyat_logs')) || [];
+        let currentUser = localStorage.getItem('tatli_sevkiyat_user');
+
+        window.onload = function() {
+            document.getElementById('sevkiyatTarih').valueAsDate = new Date();
+            if (currentUser === 'yusuf') {
+                showApp();
+            }
+            populateMonthFilter();
+        };
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            const err = document.getElementById('loginError');
+
+            if (u === 'yusuf' && p === '010203') {
+                localStorage.setItem('tatli_sevkiyat_user', 'yusuf');
+                currentUser = 'yusuf';
+                err.classList.add('hidden');
+                showApp();
+            } else {
+                err.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('tatli_sevkiyat_user');
+            currentUser = null;
+            document.getElementById('appContainer').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('loginForm').reset();
+        }
+
+        function showApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appContainer').classList.remove('hidden');
+            renderLogs();
+            renderDashboard();
+        }
+
+        function switchTab(tabName) {
+            document.getElementById('tabEntry').classList.add('hidden');
+            document.getElementById('tabHistory').classList.add('hidden');
+            document.getElementById('tabDashboard').classList.add('hidden');
+
+            document.getElementById('btnTabEntry').className = "px-4 py-2 text-sm font-semibold rounded-lg transition text-slate-600 hover:text-slate-900";
+            document.getElementById('btnTabHistory').className = "px-4 py-2 text-sm font-semibold rounded-lg transition text-slate-600 hover:text-slate-900";
+            document.getElementById('btnTabDashboard').className = "px-4 py-2 text-sm font-semibold rounded-lg transition text-slate-600 hover:text-slate-900";
+
+            if (tabName === 'entry') {
+                document.getElementById('tabEntry').classList.remove('hidden');
+                document.getElementById('btnTabEntry').className = "px-4 py-2 text-sm font-semibold rounded-lg transition bg-white text-slate-900 shadow-xs";
+            } else if (tabName === 'history') {
+                document.getElementById('tabHistory').classList.remove('hidden');
+                document.getElementById('btnTabHistory').className = "px-4 py-2 text-sm font-semibold rounded-lg transition bg-white text-slate-900 shadow-xs";
+                renderLogs();
+            } else if (tabName === 'dashboard') {
+                document.getElementById('tabDashboard').classList.remove('hidden');
+                document.getElementById('btnTabDashboard').className = "px-4 py-2 text-sm font-semibold rounded-lg transition bg-white text-slate-900 shadow-xs";
+                renderDashboard();
+            }
+        }
+
+        function saveSevkiyat(e) {
+            e.preventDefault();
+            const editingId = document.getElementById('editingId').value;
+            const tarih = document.getElementById('sevkiyatTarih').value;
+            const sube = document.getElementById('sevkiyatSube').value;
+            const inputs = document.querySelectorAll('.urun-input');
+            
+            let urunler = {};
+            let doluMu = false;
+
+            inputs.forEach(input => {
+                let rawVal = input.value.trim();
+                if (rawVal !== "") {
+                    rawVal = rawVal.replace(/\./g, '').replace(',', '.');
+                    const val = parseFloat(rawVal);
+                    if (!isNaN(val) && val > 0) {
+                        urunler[input.getAttribute('data-urun')] = val;
+                        doluMu = true;
+                    }
+                }
+            });
+
+            if (!doluMu) {
+                alert('Lütfen en az bir ürün için geçerli bir miktar giriniz!');
+                return;
+            }
+
+            const now = new Date();
+            const timestamp = now.toLocaleString('tr-TR');
+
+            if (editingId) {
+                const index = logs.findIndex(l => l.id == editingId);
+                if (index !== -1) {
+                    logs[index].tarih = tarih;
+                    logs[index].sube = sube;
+                    logs[index].urunler = urunler;
+                    logs[index].timestamp = timestamp + " (Düzenlendi)";
+                }
+                alert('Sevkiyat başarıyla güncellendi!');
+                cancelEdit();
+            } else {
+                const yeniKayit = {
+                    id: Date.now(),
+                    timestamp: timestamp,
+                    tarih: tarih,
+                    sube: sube,
+                    urunler: urunler
+                };
+                logs.unshift(yeniKayit);
+                alert('Sevkiyat başarıyla kaydedildi!');
+                document.getElementById('sevkiyatForm').reset();
+                document.getElementById('sevkiyatTarih').valueAsDate = new Date();
+            }
+
+            localStorage.setItem('tatli_sevkiyat_logs', JSON.stringify(logs));
+            populateMonthFilter();
+            renderDashboard();
+            renderLogs();
+        }
+
+        function editLog(id) {
+            const log = logs.find(l => l.id == id);
+            if (!log) return;
+
+            document.getElementById('editingId').value = log.id;
+            document.getElementById('sevkiyatTarih').value = log.tarih;
+            document.getElementById('sevkiyatSube').value = log.sube;
+
+            const inputs = document.querySelectorAll('.urun-input');
+            inputs.forEach(input => {
+                const urunAd = input.getAttribute('data-urun');
+                input.value = log.urunler[urunAd] !== undefined ? log.urunler[urunAd] : '';
+            });
+
+            document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-500 mr-2"></i> Sevkiyat Düzenleniyor (ID: ${log.id})`;
+            document.getElementById('editModeIndicator').classList.remove('hidden');
+            document.getElementById('editModeIndicator').classList.add('flex');
+            document.getElementById('submitBtn').innerHTML = `<i class="fa-solid fa-check mr-2"></i> Güncellemeyi Kaydet`;
+
+            switchTab('entry');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            document.getElementById('editingId').value = '';
+            document.getElementById('sevkiyatForm').reset();
+            document.getElementById('sevkiyatTarih').valueAsDate = new Date();
+            document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-truck-fast text-amber-500 mr-2"></i> Günlük Sevkiyat Girişi`;
+            document.getElementById('editModeIndicator').classList.remove('flex');
+            document.getElementById('editModeIndicator').classList.add('hidden');
+            document.getElementById('submitBtn').innerHTML = `<i class="fa-solid fa-floppy-disk mr-2"></i> Sevkiyatı Kaydet`;
+        }
+
+        function toggleDetails(id) {
+            const detailRow = document.getElementById(`details-${id}`);
+            const icon = document.getElementById(`icon-${id}`);
+            if (detailRow.classList.contains('hidden')) {
+                detailRow.classList.remove('hidden');
+                icon.className = "fa-solid fa-eye-slash text-amber-600";
+            } else {
+                detailRow.classList.add('hidden');
+                icon.className = "fa-solid fa-eye text-slate-500 hover:text-amber-500";
+            }
+        }
+
+        function renderLogs() {
+            const tbody = document.getElementById('logTableBody');
+            const selectedSube = document.getElementById('filterLogSube').value;
+            const startDate = document.getElementById('filterLogStartDate').value;
+            tbody.innerHTML = '';
+
+            const filtered = logs.filter(l => {
+                const subeMatch = !selectedSube || l.sube === selectedSube;
+                const dateMatch = !startDate || l.tarih >= startDate;
+                return subeMatch && dateMatch;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">Seçilen kriterlere uygun kayıt bulunamadı.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(log => {
+                let urunBadges = Object.entries(log.urunler).map(([k, v]) => `<span class="bg-amber-50 text-amber-800 px-2.5 py-1 rounded-lg text-xs font-semibold mr-2 inline-block mb-1">${k}: <strong class="text-slate-900">${v.toLocaleString('tr-TR')}</strong></span>`).join('');
+                
+                let trMain = document.createElement('tr');
+                trMain.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                trMain.innerHTML = `
+                    <td class="p-3 text-slate-500 text-xs">${log.timestamp}</td>
+                    <td class="p-3 font-medium text-slate-700">${log.tarih}</td>
+                    <td class="p-3 font-semibold text-slate-800">${log.sube}</td>
+                    <td class="p-3 text-slate-400 italic text-xs">Gizli İçerik (Göz butonuna tıklayın)</td>
+                    <td class="p-3 text-right space-x-2">
+                        <button onclick="toggleDetails(${log.id})" class="p-2 bg-slate-100 hover:bg-amber-100 rounded-xl transition" title="İçeriği Göster/Gizle">
+                            <i id="icon-${log.id}" class="fa-solid fa-eye text-slate-500"></i>
+                        </button>
+                        <button onclick="editLog(${log.id})" class="p-2 bg-slate-100 hover:bg-amber-500 hover:text-white rounded-xl transition" title="Düzenle">
+                            <i class="fa-solid fa-pen-to-square text-amber-600"></i>
+                        </button>
+                        <button onclick="deleteLog(${log.id})" class="p-2 bg-slate-100 hover:bg-red-500 hover:text-white rounded-xl transition" title="Sil">
+                            <i class="fa-solid fa-trash text-red-500"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(trMain);
+
+                let trDetail = document.createElement('tr');
+                trDetail.id = `details-${log.id}`;
+                trDetail.className = "hidden bg-amber-50/40 border-b border-slate-100";
+                trDetail.innerHTML = `
+                    <td colspan="5" class="p-4">
+                        <div class="text-xs font-bold text-slate-500 uppercase mb-2"><i class="fa-solid fa-box-open mr-1"></i> Sevkiyat Kalemleri Detayı:</div>
+                        <div class="flex flex-wrap gap-2">${urunBadges}</div>
+                    </td>
+                `;
+                tbody.appendChild(trDetail);
+            });
+        }
+
+        function resetLogFilters() {
+            document.getElementById('filterLogSube').value = '';
+            document.getElementById('filterLogStartDate').value = '';
+            renderLogs();
+        }
+
+        function deleteLog(id) {
+            if (confirm('Bu kaydı silmek istediğinize emin misiniz?')) {
+                logs = logs.filter(l => l.id !== id);
+                localStorage.setItem('tatli_sevkiyat_logs', JSON.stringify(logs));
+                renderLogs();
+                populateMonthFilter();
+                renderDashboard();
+            }
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "sevkiyat_yedek.json");
+            dlAnchorElem.click();
+        }
+
+        function populateMonthFilter() {
+            const select = document.getElementById('filterMonth');
+            const months = [...new Set(logs.map(l => l.tarih.substring(0, 7)))].sort().reverse();
+            
+            const currentMonth = new Date().toISOString().substring(0, 7);
+            if (!months.includes(currentMonth)) months.unshift(currentMonth);
+
+            const prevVal = select.value;
+            select.innerHTML = '';
+            months.forEach(m => {
+                const [year, month] = m.split('-');
+                const dateObj = new Date(year, month - 1, 1);
+                const monthName = dateObj.toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
+                
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = monthName;
+                select.appendChild(opt);
+            });
+            if (prevVal && months.includes(prevVal)) {
+                select.value = prevVal;
+            }
+        }
+
+        let barChartInstance = null;
+        let doughnutChartInstance = null;
+
+        function renderDashboard() {
+            const selectedMonth = document.getElementById('filterMonth').value;
+            const summaryCards = document.getElementById('summaryCards');
+            const dashboardTableBody = document.getElementById('dashboardTableBody');
+            
+            summaryCards.innerHTML = '';
+            dashboardTableBody.innerHTML = '';
+
+            const monthLogs = logs.filter(l => l.tarih.startsWith(selectedMonth));
+
+            const subeler = ["Silivri", "Mega", "Akbatı", "Fulya", "212", "Çam Sakura", "Esenyurt"];
+            
+            let subeUrunTotals = {};
+            subeler.forEach(s => {
+                subeUrunTotals[s] = {
+                    "Ekler (KG)": 0,
+                    "Profiterol (KG)": 0,
+                    "Kazandibi (Adet)": 0,
+                    "Tavukgöğsü (Adet)": 0,
+                    "Sütlaç (Adet)": 0
+                };
+            });
+
+            let urunTotals = {};
+            let genelToplamMiktar = 0;
+
+            monthLogs.forEach(l => {
+                if (subeUrunTotals[l.sube]) {
+                    Object.entries(l.urunler).forEach(([urun, miktar]) => {
+                        if (subeUrunTotals[l.sube][urun] !== undefined) {
+                            subeUrunTotals[l.sube][urun] += miktar;
+                        }
+                        genelToplamMiktar += miktar;
+                        urunTotals[urun] = (urunTotals[urun] || 0) + miktar;
+                    });
+                }
+            });
+
+            let sampiyonSube = "Yok";
+            let maxSubeVal = -1;
+            subeler.forEach(s => {
+                let subeTop = Object.values(subeUrunTotals[s]).reduce((a, b) => a + b, 0);
+                if (subeTop > maxSubeVal) {
+                    maxSubeVal = subeTop;
+                    sampiyonSube = s;
+                }
+            });
+
+            let gozdeUrun = "Yok";
+            let maxUrunVal = -1;
+            Object.entries(urunTotals).forEach(([urun, val]) => {
+                if (val > maxUrunVal) {
+                    maxUrunVal = val;
+                    gozdeUrun = urun;
+                }
+            });
+
+            summaryCards.innerHTML = `
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Toplam Sevkiyat</span>
+                    <div class="text-2xl font-extrabold text-slate-800 mt-1">${genelToplamMiktar.toLocaleString('tr-TR')}</div>
+                    <span class="text-xs text-slate-500">Bu ayki toplam miktar</span>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Toplam İşlem Adedi</span>
+                    <div class="text-2xl font-extrabold text-slate-800 mt-1">${monthLogs.length}</div>
+                    <span class="text-xs text-slate-500">Kayıtlı sevkiyat fişi</span>
+                </div>
+                <div class="bg-amber-50/60 p-4 rounded-xl border border-amber-200">
+                    <span class="text-xs font-bold text-amber-700 uppercase">Şampiyon Şube</span>
+                    <div class="text-xl font-extrabold text-amber-900 mt-1 truncate">${maxSubeVal > 0 ? sampiyonSube : 'Veri Yok'}</div>
+                    <span class="text-xs text-amber-600">${maxSubeVal > 0 ? maxSubeVal.toLocaleString('tr-TR') + ' toplam' : ''}</span>
+                </div>
+                <div class="bg-emerald-50/60 p-4 rounded-xl border border-emerald-200">
+                    <span class="text-xs font-bold text-emerald-700 uppercase">En Çok Giden Ürün</span>
+                    <div class="text-xl font-extrabold text-emerald-900 mt-1 truncate">${maxUrunVal > 0 ? gozdeUrun : 'Veri Yok'}</div>
+                    <span class="text-xs text-emerald-600">${maxUrunVal > 0 ? maxUrunVal.toLocaleString('tr-TR') + ' miktar' : ''}</span>
+                </div>
+            `;
+
+            subeler.forEach(sube => {
+                let row = subeUrunTotals[sube];
+                let subeTop = Object.values(row).reduce((a, b) => a + b, 0);
+
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-100/50 transition border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="py-3 px-3 font-bold text-slate-800">${sube}</td>
+                    <td class="py-3 px-3 text-slate-600">${row["Ekler (KG)"] > 0 ? row["Ekler (KG)"].toLocaleString('tr-TR') : '-'}</td>
+                    <td class="py-3 px-3 text-slate-600">${row["Profiterol (KG)"] > 0 ? row["Profiterol (KG)"].toLocaleString('tr-TR') : '-'}</td>
+                    <td class="py-3 px-3 text-slate-600">${row["Kazandibi (Adet)"] > 0 ? row["Kazandibi (Adet)"].toLocaleString('tr-TR') : '-'}</td>
+                    <td class="py-3 px-3 text-slate-600">${row["Tavukgöğsü (Adet)"] > 0 ? row["Tavukgöğsü (Adet)"].toLocaleString('tr-TR') : '-'}</td>
+                    <td class="py-3 px-3 text-slate-600">${row["Sütlaç (Adet)"] > 0 ? row["Sütlaç (Adet)"].toLocaleString('tr-TR') : '-'}</td>
+                    <td class="py-3 px-3 text-right font-extrabold text-amber-600">${subeTop.toLocaleString('tr-TR')}</td>
+                `;
+                dashboardTableBody.appendChild(tr);
+            });
+
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            if (barChartInstance) barChartInstance.destroy();
+
+            barChartInstance = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: subeler,
+                    datasets: [{
+                        label: 'Toplam Miktar',
+                        data: subeler.map(s => Object.values(subeUrunTotals[s]).reduce((a, b) => a + b, 0)),
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+            if (doughnutChartInstance) doughnutChartInstance.destroy();
+
+            const urunLabels = Object.keys(urunTotals);
+            const urunValues = Object.values(urunTotals);
+
+            doughnutChartInstance = new Chart(ctxDoughnut, {
+                type: 'doughnut',
+                data: {
+                    labels: urunLabels.length > 0 ? urunLabels : ['Veri Yok'],
+                    datasets: [{
+                        data: urunValues.length > 0 ? urunValues : [1],
+                        backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#64748b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
